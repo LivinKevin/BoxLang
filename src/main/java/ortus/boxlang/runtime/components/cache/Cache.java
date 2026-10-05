@@ -170,7 +170,7 @@ public class Cache extends Component {
 	 *
 	 * @attribute.cachename - optional cache name. If not provided the default cache will be used
 	 *
-	 * @attribute.region Alias for cachename attribute (Adobe ColdFusion compatibility)
+	 * @attribute.region - Alias for cachename attribute (Adobe ColdFusion compatibility)
 	 *
 	 * @attribute.timespan - The duration to cache the object, defaults to either the cache default or unlimited until a server restart
 	 *
