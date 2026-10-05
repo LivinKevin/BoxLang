@@ -303,4 +303,31 @@ public class CacheTest {
 
 	}
 
+	@DisplayName( "It uses the region attribute as the cache name")
+	@Test
+	public void testRegionAttribute() {
+		instance.executeSource(
+		    """
+		    bx:cache action="put" key="regionKey" value="inRegion" region="CacheTestCache";
+			bx:cache action="get" key="regionKey" name="result" region="CacheTestCache";
+			""",
+		    context, BoxSourceType.BOXSCRIPT );
+
+		assertEquals( "inRegion", variables.getAsString( result ) );
+		assertTrue( instance.getCacheService().getCache( testCacheKey ).get( "regionKey" ).isPresent() );
+	}
+
+
+	@DisplayName( "cacheName takes precedence over region when both are passed" )
+	@Test
+	public void testCacheNameBeatsRegion() {
+		instance.executeSource(
+			"""
+			bx:cache action="put" key="bothKey" value="x" cacheName="CacheTestCache" region="default";
+			""",
+			context, BoxSourceType.BOXSCRIPT );
+
+		assertTrue( instance.getCacheService().getCache( testCacheKey ).get( "bothKey" ).isPresent() );
+	}
+	
 }

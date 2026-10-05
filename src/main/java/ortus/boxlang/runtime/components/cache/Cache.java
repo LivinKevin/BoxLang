@@ -124,6 +124,7 @@ public class Cache extends Component {
 		    new Attribute( Key.value, "any" ), // "value"
 		    new Attribute( Key._NAME, "any" ), // "variable or variable name"
 		    new Attribute( Key.cacheName, "string" ), // "true|false"
+			 new Attribute( Key.region, "string" ), // "alias for cacheName"
 		    new Attribute( Key.metadata, "struct" ), // "true|false"
 		    new Attribute( Key.directory, "string" ), // "directory path"
 		    new Attribute( Key.timespan, "double" ), // "decimal number of days">
@@ -137,7 +138,6 @@ public class Cache extends Component {
 		    new Attribute( Key.password, "string" ), // "password"
 		    new Attribute( Key.port, "integer" ), // "port number"
 		    new Attribute( Key.protocol, "string" ), // "http://|https://"
-		    new Attribute( Key.region, "string" ), // "region_name"
 		    new Attribute( Key.useQueryString, "boolean", false ), // "false|true"
 		    new Attribute( Key.username, "string" ), // "username"
 		    // TODO: Circle back and immplement find nearby checks for these variables - then make them part of the key
@@ -208,6 +208,11 @@ public class Cache extends Component {
 		    CacheAction.GET,
 		    CacheAction.PUT
 		);
+
+		// "region" is Adobe ColdFusion's name for cacheName; cacheName takes precedence if both are passed
+		if ( cacheName == null && attributes.containsKey( Key.region ) ) {
+			cacheName = attributes.getAsString( Key.region );
+		}
 
 		if ( key == null && attributes.containsKey( Key.id ) ) {
 			key = attributes.getAsString( Key.id );
