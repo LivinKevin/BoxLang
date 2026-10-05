@@ -329,5 +329,19 @@ public class CacheTest {
 
 		assertTrue( instance.getCacheService().getCache( testCacheKey ).get( "bothKey" ).isPresent() );
 	}
+
+	@DisplayName ( "Legacy connection attributes are accepted and ignored" )
+	@Test
+	public void testLegacyAttributesIgnored() {
+		instance.executeSource(
+			"""
+			bx:cache action="put" key="legacyKey" value="ok"
+				username="testUser" password="testPass" port="8080" protocol="https://";
+			bx:cache action="get" key="legacyKey" name="result";
+			""",
+			context, BoxSourceType.BOXSCRIPT );
+
+		assertEquals( "ok", variables.getAsString( result ) );
+	}
 	
 }

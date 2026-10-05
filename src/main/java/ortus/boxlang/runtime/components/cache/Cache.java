@@ -133,13 +133,14 @@ public class Cache extends Component {
 		    new Attribute( Key.stripWhitespace, "boolean", false ), // "false|true"
 		    new Attribute( Key.throwOnError, "boolean", false ), // "false|true"
 		    new Attribute( Key.useCache, "boolean", true ), // "true|false"
-		    // TODO: These are specfic to web connectivity and will need to be implemented with the web runtime
-		    new Attribute( Key.expireURL, "string" ), // "wildcarded URL reference"
-		    new Attribute( Key.password, "string" ), // "password"
+			// Legacy CFML compatibility attributes - accepted but not used
+			new Attribute( Key.password, "string" ), // "password"
 		    new Attribute( Key.port, "integer" ), // "port number"
 		    new Attribute( Key.protocol, "string" ), // "http://|https://"
+			new Attribute( Key.username, "string" ), // "username"
+		    // TODO: These are specfic to web connectivity and will need to be implemented with the web runtime
+		    new Attribute( Key.expireURL, "string" ), // "wildcarded URL reference"
 		    new Attribute( Key.useQueryString, "boolean", false ), // "false|true"
-		    new Attribute( Key.username, "string" ), // "username"
 		    // TODO: Circle back and immplement find nearby checks for these variables - then make them part of the key
 		    new Attribute( Key.dependsOn, "string" ),// "variable name list"
 		};
@@ -183,6 +184,10 @@ public class Cache extends Component {
 	 * @attribute.protocol - Legacy CFML attribute. Not implemented
 	 *
 	 * @attribute.port - Legacy CFML attributes. Not implemented
+	 * 
+	 * @attribute.username - Legacy CFML attributes. Not implemented
+	 * 
+	 * @attribute.password - Legacy CFML attributes. Not implemented
 	 *
 	 */
 	public BodyResult _invoke( IBoxContext context, IStruct attributes, ComponentBody body, IStruct executionState ) {
