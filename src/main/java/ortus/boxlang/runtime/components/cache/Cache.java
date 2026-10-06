@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Set;
 
 import ortus.boxlang.runtime.BoxRuntime;
+import ortus.boxlang.runtime.cache.filters.WildcardFilter;
 import ortus.boxlang.runtime.cache.providers.ICacheProvider;
 import ortus.boxlang.runtime.components.Attribute;
 import ortus.boxlang.runtime.components.BoxComponent;
@@ -368,12 +369,16 @@ public class Cache extends Component {
 					break;
 				}
 				case FLUSH : {
+					String expireURL = attributes.getAsString( Key.expireURL );
 					if ( key != null ) {
 						if ( throwOnError ) {
 							cacheProvider.clear( key );
 						} else {
 							cacheProvider.clearQuiet( key );
 						}
+					} else if ( expireURL != null ) {
+						// Clear every auto-generated page cache entry whose URL matches the wildcard
+						cacheProvider.clearAll( new WildcardFilter( CACHE_PREFIX + expireURL + "*" ) );
 					} else {
 						try {
 							cacheProvider.clearAll();

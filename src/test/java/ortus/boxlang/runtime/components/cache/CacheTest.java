@@ -363,4 +363,22 @@ public class CacheTest {
 		assertEquals( "<h1>Hello bar!</h1>", variables.getAsString( result ).trim() );
 	}
 	
+		@DisplayName( "expireURL flushes only cached pages matching the pattern" )
+	@Test
+	public void testExpireURL() {
+		instance.executeSource(
+		    """
+		    bx:cache action="put" key="BL_TEMPLATE_/products/a.cfm|abc" value="1";
+		    bx:cache action="put" key="BL_TEMPLATE_/products/b.cfm|def" value="2";
+		    bx:cache action="put" key="BL_TEMPLATE_/about.cfm|ghi" value="3";
+		    bx:cache action="flush" expireURL="/products/*";
+		    """,
+		    context, BoxSourceType.BOXSCRIPT );
+
+		var cache = instance.getCacheService().getCache( Key._DEFAULT );
+		assertFalse( cache.get( "BL_TEMPLATE_/products/a.cfm|abc" ).isPresent() );
+		assertFalse( cache.get( "BL_TEMPLATE_/products/b.cfm|def" ).isPresent() );
+		assertTrue( cache.get( "BL_TEMPLATE_/about.cfm|ghi" ).isPresent() );
+	}
+	
 }
