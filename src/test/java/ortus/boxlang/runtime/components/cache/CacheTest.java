@@ -343,5 +343,24 @@ public class CacheTest {
 
 		assertEquals( "ok", variables.getAsString( result ) );
 	}
+
+		@DisplayName( "Content caching still works with useQueryString outside of a web request" )
+	@Test
+	public void testUseQueryStringOutsideWebRequest() {
+		instance.executeSource(
+		    """
+		         <bx:cache action="cache" name="result" useQueryString="true">
+		      	<bx:script>
+		      		actual = "bar";
+		      	</bx:script>
+		    <bx:output>
+		      	<h1>Hello #actual#!</h1>
+		    </bx:output>
+		      </bx:cache>
+		         """,
+		    context, BoxSourceType.BOXTEMPLATE );
+
+		assertEquals( "<h1>Hello bar!</h1>", variables.getAsString( result ).trim() );
+	}
 	
 }

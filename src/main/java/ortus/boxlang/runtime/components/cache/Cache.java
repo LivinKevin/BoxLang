@@ -37,12 +37,14 @@ import ortus.boxlang.runtime.dynamic.casters.StringCaster;
 import ortus.boxlang.runtime.events.BoxEvent;
 import ortus.boxlang.runtime.logging.BoxLangLogger;
 import ortus.boxlang.runtime.scopes.ArgumentsScope;
+import ortus.boxlang.runtime.scopes.IScope;
 import ortus.boxlang.runtime.scopes.Key;
 import ortus.boxlang.runtime.services.CacheService;
 import ortus.boxlang.runtime.types.IStruct;
 import ortus.boxlang.runtime.types.Struct;
 import ortus.boxlang.runtime.types.exceptions.AbortException;
 import ortus.boxlang.runtime.types.exceptions.BoxRuntimeException;
+import ortus.boxlang.runtime.types.exceptions.ScopeNotFoundException;
 import ortus.boxlang.runtime.validation.Validator;
 
 @BoxComponent( description = "Manage cached data with get, put, and delete operations", allowsBody = true )
@@ -231,21 +233,28 @@ public class Cache extends Component {
 			);
 		}
 
-		String cacheKeyName = key != null
-		    ? key
-		    : CACHE_PREFIX + StringCaster.cast(
-		        runtime.getFunctionService().getGlobalFunction( Key.hash40 ).invoke(
-		            context,
-		            ArgumentsScope.of(
-		                Key.input, Struct.of(
-		                    Key.attributes, attributes,
-		                    Key.body, body
-		                )
-		            ),
-		            false,
-		            Key.hash40
-		        )
-		    );
+		String cacheKeyName;
+		if ( key != null ) {
+			cacheKeyName = key;
+		} else {
+			boolean	useQueryString	= BooleanCaster.cast( attributes.get( Key.useQueryString ) );
+			String	requestPath		= getRequestPath( context, useQueryString );
+			String	bodyHash		= StringCaster.cast(
+			    runtime.getFunctionService().getGlobalFunction( Key.hash40 ).invoke(
+			        context,
+			        ArgumentsScope.of(
+			            Key.input, Struct.of(
+			                Key.attributes, attributes,
+			                Key.body, body
+			            )
+			        ),
+			        false,
+			        Key.hash40
+			    )
+			);
+			// Format: BL_TEMPLATE_<path>|<hash> (path omitted outside of web requests)
+			cacheKeyName = CACHE_PREFIX + ( requestPath != null ? requestPath + "|" : "" ) + bodyHash;
+		}
 
 		if ( timespan == null && idleTime != null ) {
 			timespan = idleTime;
@@ -421,6 +430,38 @@ public class Cache extends Component {
 		}
 
 		return DEFAULT_RETURN;
+	}
+
+	/**
+	 * Returns the current request path (optionally including the query string),
+	 * or null when not running inside a web request.
+	 *
+	 * @param context            The current context
+	 * @param includeQueryString Whether to append the query string
+	 *
+	 * @return The request path or null
+	 */
+	private String getRequestPath( IBoxContext context, boolean includeQueryString ) {
+		IScope cgi;
+		try {
+			cgi = context.getScope( Key.of( "cgi" ) );
+		} catch ( ScopeNotFoundException e ) {
+			return null; // Not a web request
+		}
+
+		Object scriptName = cgi.get( Key.script_name );
+		if ( scriptName == null || StringCaster.cast( scriptName ).isEmpty() ) {
+			return null;
+		}
+		String path = StringCaster.cast( scriptName );
+
+		if ( includeQueryString ) {
+			Object queryString = cgi.get( Key.query_string );
+			if ( queryString != null && !StringCaster.cast( queryString ).isEmpty() ) {
+				path += "?" + StringCaster.cast( queryString );
+			}
+		}
+		return path;
 	}
 
 	/**
