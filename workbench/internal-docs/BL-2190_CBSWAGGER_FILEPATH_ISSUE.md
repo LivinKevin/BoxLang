@@ -38,20 +38,29 @@
 3. In the BoxLang repo (optional): include the underlying Java error in the interop "Error invoking constructor" message (`DynamicInteropService.java` line 418).
 4. Document that BoxLang file functions and Java classes resolve paths differently.
 
+### Implemented (swagger-sdk, branch `BL-2190-filepath-fix-2`)
+- `Parser.cfc` `init()`, YAML case: read the file with `fileRead( DocPath )` first, then parse the string.
+  - BoxLang with bx-yaml: `yamlDeserialize( yamlText )`.
+  - Otherwise: SnakeYAML `.load( yamlText )` (the jar already ships in swagger-sdk's `lib/`).
+- `fileRead()` resolves `//` and mapped paths the same way `fileExists()` does, so Java never receives the raw path.
+- Why not the previous code: it only worked on BoxLang when bx-yaml was installed (`yamlDeserialize not found` otherwise), and its fallback still opened the raw path with `FileInputStream`.
+- Why not expand the path first (fix-1): `fileRead()` already resolves the path, so no extra expand step or `java.io.File` check is needed.
+
 ### Rejected
 - Making `fileExists()` check only the literal path: it would disagree with `fileRead()` and break the ColdBox `//` workaround.
 - Automatically expanding strings passed to Java: BoxLang can't tell which strings are paths, so it would break unrelated Java calls.
+- Fixing the `//` built in `fetchDocumentReference()` (empty base path + `/` prefix): this is where the `//` comes from, but `fileRead()` handles it, so it isn't needed for this fix. Left as a follow-up.
 
 
 ## Implementation Steps
 
-1. Get approval from the lead (done: other repos are allowed).
-2. Fork swagger-sdk and cbSwagger; check out PR #27 and PR #50 locally.
-3. Run both PRs against the reproduction and the reporter's scenario; post results as PR review comments.
-4. In BoxLang: create branch `BL-2190-cbswagger-filepath-issue` off `development`.
-5. Add tests to `FileExistsTest` and `ExpandPathTest`.
-6. Optional: update the error message in `DynamicInteropService`.
-7. Run `./gradlew spotlessApply` and the tests, then open a PR.
+1. Got approval from the lead to work in other repos.
+2. Reproduced the issue in BoxLang (T1-T10 below).
+3. Cloned the team fork of swagger-sdk; branched `BL-2190-filepath-fix-2` off `development`.
+4. Changed the YAML case in `models/OpenAPI/Parser.cfc` (commit d790344).
+5. Added a ParserSpec test for the reporter's scenario (commit 39f16b0).
+6. Ran the suite on a BoxLang 1.18 server with and without bx-yaml.
+7. Next: open a PR to `development` with these results.
 
 
 ## Validation Plan
@@ -84,16 +93,33 @@ Notes:
 - T7: BoxLang and Java disagree about whether the same file exists.
 - T10: the upstream swagger-sdk fix needs the bx-yaml module, which is not in core.
 
+### swagger-sdk results (BoxLang 1.18, `server-boxlang@1.json`)
+
+New test in `ParserSpec.cfc`: parses a struct with no base document and a `$ref` to
+`/tests/resources/petstore/petstore.yaml`, which resolves to `//tests/...` (the reporter's path shape).
+
+| Run | Previous code | Fix-2 |
+|---|---|---|
+| With bx-yaml, full suite | - | 8/8 passed |
+| Without bx-yaml, ParserSpec | 1 passed, 2 errors (`yamlDeserialize not found`) | 3/3 passed |
+
+Known limitation: without bx-yaml, `Document.asYAML()` still fails (`yamlSerialize not found`).
+That writes YAML, which is out of scope here.
+
+Local setup note: `test-harness/box.json` pins ColdBox 6, which fails on BoxLang (`server.coldfusion` missing).
+Run `box install coldbox@^8 --noSave` in `test-harness` first, as CI does.
+
 ### Verification Steps
-- Existing tests still pass: `./gradlew test --tests "*FileExistsTest" --tests "*ExpandPathTest"`
-- Rerun the reproduction script against the PR #27 / #50 branches.
+- Start the server: `box server start serverConfigFile=server-boxlang@1.json` (from the swagger-sdk root).
+- Run the suite: `http://localhost:60299/tests/runner.cfm?reporter=text`, with bx-yaml and again without it.
 
 ### Success Criteria
-- With PRs #27/#50 applied, the reporter's scenario no longer crashes.
-- New BoxLang tests cover the `//` and mapping-resolution behavior.
-- No existing BoxLang behavior changes.
+- [x] The reporter's scenario (YAML `$ref` through a `//` path) no longer crashes.
+- [x] A new test covers it, and it fails on the previous code without bx-yaml.
+- [x] No existing swagger-sdk tests break.
+- [ ] A swagger-sdk release on ForgeBox (still 3.0.0 from 2022) so users actually get the fix.
 
-## Open Questions for Maintainers
+## Open Questions
 
 1. Can PRs #27 and #50 be reviewed and merged, and swagger-sdk released to ForgeBox? The latest release there is still 3.0.0+25 from 2022.
 2. Should BoxLang look at the isStruct/StructCasterLoose hang described in #27?
