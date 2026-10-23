@@ -153,4 +153,67 @@ public class SaveContentTest {
 		assertThat( variables.getAsString( result ) ).isEqualTo( "before-Hello World" );
 	}
 
+	@DisplayName( "It can capture content with Adobe's savecontent assignment syntax" )
+	@Test
+	public void testCanCaptureContentAdobeAssignment() {
+
+		instance.executeSource(
+		    """
+		    echo( "before" );
+		    result = savecontent {
+		    	echo( "Hello World" );
+		    }
+		    echo( "after" );
+		    """,
+		    context, BoxSourceType.CFSCRIPT );
+		assertThat( variables.get( result ) ).isEqualTo( "Hello World" );
+	}
+
+	@DisplayName( "It can capture content with Adobe's savecontent assignment syntax into a scoped variable" )
+	@Test
+	public void testCanCaptureContentAdobeAssignmentScoped() {
+
+		instance.executeSource(
+		    """
+		    variables.result = savecontent {
+		    	echo( "Hello World" );
+		    }
+		    """,
+		    context, BoxSourceType.CFSCRIPT );
+		assertThat( variables.get( result ) ).isEqualTo( "Hello World" );
+	}
+
+	@DisplayName( "It can capture content with Adobe's savecontent assignment syntax inside a function" )
+	@Test
+	public void testCanCaptureContentAdobeAssignmentInFunction() {
+
+		instance.executeSource(
+		    """
+		    function getContent() {
+		    	var out = "";
+		    	out = savecontent {
+		    		echo( "Hello World" );
+		    	}
+		    	return out;
+		    }
+		    result = getContent();
+		    """,
+		    context, BoxSourceType.CFSCRIPT );
+		assertThat( variables.get( result ) ).isEqualTo( "Hello World" );
+		assertThat( variables.containsKey( Key.of( "out" ) ) ).isFalse();
+	}
+
+	@DisplayName( "A variable named savecontent can still be assigned" )
+	@Test
+	public void testVariableNamedSaveContent() {
+
+		instance.executeSource(
+		    """
+		    savecontent = "Hello World";
+		    result = savecontent;
+		    """,
+		    context, BoxSourceType.CFSCRIPT );
+		assertThat( variables.get( result ) ).isEqualTo( "Hello World" );
+	}
+
 }

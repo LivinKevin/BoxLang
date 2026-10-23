@@ -198,6 +198,40 @@ public abstract class CFParserControl extends Parser {
 	}
 
 	/**
+	 * Determines if the upcoming tokens are Adobe's savecontent assignment syntax:
+	 *
+	 * <pre>
+	 * result = savecontent { ... }
+	 * variables.result = savecontent { ... }
+	 * </pre>
+	 *
+	 * Only simple and dot-separated variable names are matched.
+	 *
+	 * @param input the token input stream
+	 *
+	 * @return true if this should be seen as a savecontent assignment
+	 */
+	protected boolean isSaveContentAssignment( TokenStream input ) {
+		int i = 1;
+		// The variable name: foo or foo.bar.baz
+		while ( true ) {
+			if ( input.LT( i ).getType() != IDENTIFIER ) {
+				return false;
+			}
+			i++;
+			if ( input.LT( i ).getType() != DOT ) {
+				break;
+			}
+			i++;
+		}
+		// = savecontent {
+		return input.LT( i ).getType() == EQUALSIGN
+		    && input.LT( i + 1 ).getType() == IDENTIFIER
+		    && input.LT( i + 1 ).getText().equalsIgnoreCase( "savecontent" )
+		    && input.LT( i + 2 ).getType() == LBRACE;
+	}
+
+	/**
 	 * Provides a gate for the [throw expr] rule if the token after throw is `(` don't match since we'll assume it's the throw() BIF.
 	 * This DOES rule out code like `throw (new Exception())` but that's a rare case.
 	 *

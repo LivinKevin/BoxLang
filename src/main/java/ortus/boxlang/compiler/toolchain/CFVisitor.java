@@ -128,6 +128,7 @@ import ortus.boxlang.parser.antlr.CFGrammar.PreAnnotationContext;
 import ortus.boxlang.parser.antlr.CFGrammar.PropertyContext;
 import ortus.boxlang.parser.antlr.CFGrammar.RethrowContext;
 import ortus.boxlang.parser.antlr.CFGrammar.ReturnContext;
+import ortus.boxlang.parser.antlr.CFGrammar.SaveContentAssignmentContext;
 import ortus.boxlang.parser.antlr.CFGrammar.ScriptContext;
 import ortus.boxlang.parser.antlr.CFGrammar.SimpleStatementContext;
 import ortus.boxlang.parser.antlr.CFGrammar.StatementBlockContext;
@@ -307,7 +308,8 @@ public class CFVisitor extends CFGrammarBaseVisitor<BoxNode> {
 	public BoxNode visitStatement( StatementContext ctx ) {
 		List<Function<StatementContext, ParserRuleContext>> functions = Arrays.asList( StatementContext::importStatement, StatementContext::do_,
 		    StatementContext::for_, StatementContext::if_, StatementContext::switch_, StatementContext::try_, StatementContext::while_,
-		    StatementContext::expressionStatement, StatementContext::include, StatementContext::component, StatementContext::statementBlock,
+		    StatementContext::expressionStatement, StatementContext::include, StatementContext::saveContentAssignment, StatementContext::component,
+		    StatementContext::statementBlock,
 		    StatementContext::simpleStatement, StatementContext::componentIsland, StatementContext::throw_,
 		    StatementContext::emptyStatementBlock, StatementContext::function );
 
@@ -484,6 +486,28 @@ public class CFVisitor extends CFGrammarBaseVisitor<BoxNode> {
 		}
 
 		return new BoxComponent( componentName, attributes, body, 0, pos, src );
+	}
+
+	/**
+	 * Adobe's savecontent assignment syntax. This is rewritten as a regular savecontent component
+	 * so the following are identical:
+	 *
+	 * <pre>
+	 * result = savecontent { writeOutput( "test" ); }
+	 * savecontent variable="result" { writeOutput( "test" ); }
+	 * </pre>
+	 */
+	@Override
+	public BoxNode visitSaveContentAssignment( SaveContentAssignmentContext ctx ) {
+		var					pos			= tools.getPosition( ctx );
+		var					src			= tools.getSourceText( ctx );
+		var					target		= ctx.fqn();
+		var					tPos		= tools.getPosition( target );
+		var					tSrc		= tools.getSourceText( target );
+		BoxAnnotation		variable	= new BoxAnnotation( new BoxFQN( "variable", tPos, tSrc ), new BoxStringLiteral( target.getText(), tPos, tSrc ), tPos,
+		    tSrc );
+		List<BoxStatement>	body		= buildStatementBlock( ctx.normalStatementBlock() );
+		return new BoxComponent( "savecontent", List.of( variable ), body, 0, pos, src );
 	}
 
 	@Override

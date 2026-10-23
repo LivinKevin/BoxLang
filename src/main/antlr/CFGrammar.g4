@@ -230,6 +230,9 @@ statement
     // needs checked PRIOR to the compnent case, which needs checked prior to expression
     | include
     | statementBlock
+    // Adobe's result = savecontent { ... } must be checked PRIOR to component and expression statements,
+    // otherwise it is seen as an assignment of a variable named savecontent followed by a separate block
+    | saveContentAssignment
     | component
     | simpleStatement
     | expressionStatement // Allows for statements like complicated.thing.foo.bar--
@@ -257,6 +260,14 @@ component
         | SEMICOLON?
     )
     | componentName (componentAttribute COMMA?)* (normalStatementBlock | SEMICOLON)
+    ;
+
+// Adobe CF syntax for capturing output directly into a variable
+// result = savecontent { writeOutput( "test" ); }
+// is the same as
+// savecontent variable="result" { writeOutput( "test" ); }
+saveContentAssignment
+    : { isSaveContentAssignment(_input) }? fqn EQUALSIGN identifier normalStatementBlock
     ;
 
 componentAttribute: identifier ((EQUALSIGN | COLON) expression)?
