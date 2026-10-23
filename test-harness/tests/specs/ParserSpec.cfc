@@ -12,6 +12,43 @@ component extends="tests.resources.BaseOpenAPISpec" {
 				runParserRecursionTests( JSONParser, true );
 			} );
 
+
+function run(){
+    describe( "Performs and tests general OpenAPIParser operations", function(){
+        beforeEach( function(){
+            setup();
+        } );
+
+        it( "Tests the ability instantiate the parser using a JSON file", function(){
+            var JSONParser = getInstance( "OpenAPIParser@SwaggerSDK" ).init( VARIABLES.TestJSONFile );
+            runParserTypeChecks( JSONParser );
+            runParserRecursionTests( JSONParser, true );
+        } );
+
+        it( "Tests the ability instantiate the parser using a YAML file", function(){
+            var YAMLParser = getInstance( "OpenAPIParser@SwaggerSDK" ).init( VARIABLES.TestYAMLFile );
+            runParserTypeChecks( YAMLParser );
+            runParserRecursionTests( YAMLParser );
+        } );
+
+
+        it( "BL-2190: parses a mapped YAML file", function(){
+            var mappedPath = "/tests/resources/petstore/petstore.yaml";
+
+            expect( fileExists( mappedPath ) ).toBeTrue();
+
+            var parser = getInstance( "OpenAPIParser@SwaggerSDK" )
+                .init( mappedPath );
+
+            var document = parser.getNormalizedDocument();
+
+            expect( document ).toHaveKey( "openapi" );
+            expect( document ).toHaveKey( "paths" );
+        } );
+    } );
+}
+
+
 			it( "Tests the ability instantiate the parser using a YAML file", function(){
 				var YAMLParser = getInstance( "OpenAPIParser@SwaggerSDK" ).init( VARIABLES.TestYAMLFile );
 				runParserTypeChecks( YAMLParser );
