@@ -153,4 +153,53 @@ public class SaveContentTest {
 		assertThat( variables.getAsString( result ) ).isEqualTo( "before-Hello World" );
 	}
 
+	@DisplayName( "BL-1046: It can capture content with the Adobe savecontent assignment syntax" )
+	@Test
+	public void testCanCaptureContentAdobeAssignmentSyntax() {
+
+		instance.executeSource(
+		    """
+		    echo( "before" );
+		    result = savecontent {
+		    	echo( "Hello World" );
+		    }
+		    echo( "after" );
+		    output = getBoxContext().getBuffer().toString();
+		    """,
+		    context, BoxSourceType.CFSCRIPT );
+		assertThat( variables.getAsString( result ) ).isEqualTo( "Hello World" );
+		// The captured content is not written to the page
+		assertThat( variables.getAsString( Key.of( "output" ) ) ).isEqualTo( "beforeafter" );
+	}
+
+	@DisplayName( "BL-1046: It can capture content into a scoped variable with the Adobe savecontent assignment syntax" )
+	@Test
+	public void testCanCaptureContentAdobeAssignmentSyntaxScoped() {
+
+		instance.executeSource(
+		    """
+		    variables.result = saveContent {
+		    	writeOutput( "Hello World" );
+		    };
+		    """,
+		    context, BoxSourceType.CFSCRIPT );
+		assertThat( variables.getAsString( result ) ).isEqualTo( "Hello World" );
+	}
+
+	@DisplayName( "BL-1046: It can capture content with the Adobe savecontent assignment syntax inside cfscript" )
+	@Test
+	public void testCanCaptureContentAdobeAssignmentSyntaxInTemplate() {
+
+		instance.executeSource(
+		    """
+		    <cfscript>
+		    	result = savecontent {
+		    		writeOutput( "Hello World" );
+		    	}
+		    </cfscript>
+		    """,
+		    context, BoxSourceType.CFTEMPLATE );
+		assertThat( variables.getAsString( result ) ).isEqualTo( "Hello World" );
+	}
+
 }

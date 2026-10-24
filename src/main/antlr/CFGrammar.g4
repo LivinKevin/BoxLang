@@ -230,6 +230,9 @@ statement
     // needs checked PRIOR to the compnent case, which needs checked prior to expression
     | include
     | statementBlock
+    // result = savecontent { ... } must be checked PRIOR to component and expression statements,
+    // otherwise "savecontent" is parsed as a variable name and the block as a separate statement
+    | saveContentAssignment
     | component
     | simpleStatement
     | expressionStatement // Allows for statements like complicated.thing.foo.bar--
@@ -260,6 +263,19 @@ component
     ;
 
 componentAttribute: identifier ((EQUALSIGN | COLON) expression)?
+    ;
+
+// Adobe ColdFusion's savecontent assignment syntax (BL-1046):
+//   result = savecontent { writeOutput( "test" ); }
+// is the same as:
+//   savecontent variable="result" { writeOutput( "test" ); }
+// Like Adobe, this is only supported directly after an assignment, not as a general expression.
+saveContentAssignment
+    : { isSaveContentAssignment(_input) }? saveContentTarget EQUALSIGN identifier normalStatementBlock
+    ;
+
+// foo or foo.bar.baz
+saveContentTarget: identifier (DOT identifier)*
     ;
 
 // Arguments are zero or more named args, or zero or more positional args, but not both (validated in the AST-building stage).

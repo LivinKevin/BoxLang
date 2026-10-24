@@ -128,6 +128,7 @@ import ortus.boxlang.parser.antlr.CFGrammar.PreAnnotationContext;
 import ortus.boxlang.parser.antlr.CFGrammar.PropertyContext;
 import ortus.boxlang.parser.antlr.CFGrammar.RethrowContext;
 import ortus.boxlang.parser.antlr.CFGrammar.ReturnContext;
+import ortus.boxlang.parser.antlr.CFGrammar.SaveContentAssignmentContext;
 import ortus.boxlang.parser.antlr.CFGrammar.ScriptContext;
 import ortus.boxlang.parser.antlr.CFGrammar.SimpleStatementContext;
 import ortus.boxlang.parser.antlr.CFGrammar.StatementBlockContext;
@@ -309,7 +310,7 @@ public class CFVisitor extends CFGrammarBaseVisitor<BoxNode> {
 		    StatementContext::for_, StatementContext::if_, StatementContext::switch_, StatementContext::try_, StatementContext::while_,
 		    StatementContext::expressionStatement, StatementContext::include, StatementContext::component, StatementContext::statementBlock,
 		    StatementContext::simpleStatement, StatementContext::componentIsland, StatementContext::throw_,
-		    StatementContext::emptyStatementBlock, StatementContext::function );
+		    StatementContext::emptyStatementBlock, StatementContext::function, StatementContext::saveContentAssignment );
 
 		// Iterate over the functions
 		for ( Function<StatementContext, ParserRuleContext> function : functions ) {
@@ -484,6 +485,35 @@ public class CFVisitor extends CFGrammarBaseVisitor<BoxNode> {
 		}
 
 		return new BoxComponent( componentName, attributes, body, 0, pos, src );
+	}
+
+	/**
+	 * Adobe ColdFusion's savecontent assignment syntax (BL-1046):
+	 * <code>result = savecontent { ... }</code>
+	 * is turned into the same component as
+	 * <code>savecontent variable="result" { ... }</code>
+	 */
+	@Override
+	public BoxNode visitSaveContentAssignment( SaveContentAssignmentContext ctx ) {
+		var					pos			= tools.getPosition( ctx );
+		var					src			= tools.getSourceText( ctx );
+		var					target		= ctx.saveContentTarget();
+		var					targetPos	= tools.getPosition( target );
+		var					targetSrc	= tools.getSourceText( target );
+
+		List<BoxAnnotation>	attributes	= new ArrayList<>();
+		attributes.add(
+		    new BoxAnnotation(
+		        new BoxFQN( "variable", targetPos, "variable" ),
+		        new BoxStringLiteral( target.getText(), targetPos, targetSrc ),
+		        targetPos,
+		        "variable=\"" + targetSrc + "\""
+		    )
+		);
+
+		List<BoxStatement> body = buildStatementBlock( ctx.normalStatementBlock() );
+
+		return new BoxComponent( "savecontent", attributes, body, 0, pos, src );
 	}
 
 	@Override

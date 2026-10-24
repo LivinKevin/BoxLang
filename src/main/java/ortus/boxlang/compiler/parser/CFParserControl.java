@@ -198,6 +198,32 @@ public abstract class CFParserControl extends Parser {
 	}
 
 	/**
+	 * Detects Adobe ColdFusion's savecontent assignment syntax (BL-1046):
+	 * <code>result = savecontent { ... }</code> or <code>foo.bar = savecontent { ... }</code>
+	 *
+	 * Without this check, "savecontent" is parsed as a variable name and the block as a separate statement.
+	 *
+	 * @param input the token input stream
+	 *
+	 * @return true if the next tokens are: identifier ( . identifier )* = savecontent {
+	 */
+	protected boolean isSaveContentAssignment( TokenStream input ) {
+		int i = 1;
+		if ( input.LT( i ).getType() != IDENTIFIER ) {
+			return false;
+		}
+		i++;
+		// Allow dotted targets like variables.result
+		while ( input.LT( i ).getType() == DOT && input.LT( i + 1 ).getType() == IDENTIFIER ) {
+			i += 2;
+		}
+		return input.LT( i ).getType() == EQUALSIGN
+		    && input.LT( i + 1 ).getType() == IDENTIFIER
+		    && input.LT( i + 1 ).getText().equalsIgnoreCase( "savecontent" )
+		    && input.LT( i + 2 ).getType() == LBRACE;
+	}
+
+	/**
 	 * Provides a gate for the [throw expr] rule if the token after throw is `(` don't match since we'll assume it's the throw() BIF.
 	 * This DOES rule out code like `throw (new Exception())` but that's a rare case.
 	 *
